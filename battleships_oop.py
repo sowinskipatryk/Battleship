@@ -7,6 +7,7 @@ TARGET_MISSED = ' . '
 TARGET_HIDDEN = ' | '
 TARGET_REVEALED = ' O '
 
+
 class Battlefield:
 
     def __init__(self):
@@ -68,6 +69,7 @@ class Battlefield:
             else:
                 self.place_ship(row, col, ships.pop(0), direction)
 
+
 def is_good_move(row, col, obj):
     if row not in range(10) or col not in range(10):
         print("This is not a valid move.")
@@ -76,6 +78,7 @@ def is_good_move(row, col, obj):
     if obj.battlefield[row][col] == TARGET_HIT or obj.battlefield[row][col] == TARGET_MISSED:
         return False
     return True
+
 
 def convert_field_to_num(field):
     letter, number = field[0].upper(), int(field[1:]) - 1
@@ -164,5 +167,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# ships overlapping
