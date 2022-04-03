@@ -222,6 +222,12 @@ class Opponent(Battlefield):
                     self.cells[num][x].value = TARGET_REVEALED
             opp_ships.pop(0)
 
+    def repeat(self):
+        if self.selected:
+            x, y = self.selected
+            if (x, y) in self.moves:
+                return True
+
     def shoot(self):
         if self.selected:
             x, y = self.selected
@@ -269,7 +275,7 @@ class Cell:
                              (x, y + self.h_offset, gap, gap), 3)
 
 
-def draw_window(player, opp, msg):
+def draw_window(player, opp, msg, msg2):
     pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 
     WIN.fill(BG_COLOR)
@@ -283,23 +289,26 @@ def draw_window(player, opp, msg):
               f'hits)', EDGE,
               3 * EDGE + BF_HEIGHT + PLAYER_TEXT.get_height())
     draw_text(msg, BF_WIDTH + 6 * EDGE, EDGE)
+    draw_text(msg2, BF_WIDTH + 6 * EDGE, 3*EDGE)
 
     pygame.display.flip()
 
 
-def check_endgame(player, opp, msg):
+def check_endgame(player, opp, msg, msg2):
     if not player.hits_left:
-        msg = 'Opponent wins!'
-        draw_window(player, opp, msg)
+        msg = 'All player\'s ships destroyed!'
+        msg2 = 'Opponent wins!'
+        draw_window(player, opp, msg, msg2)
         sleep(3)
         quit()
     elif not opp.hits_left:
-        msg = 'Player wins!'
-        draw_window(player, opp, msg)
+        msg = 'All enemy ships destroyed!'
+        msg2 = 'Player wins!'
+        draw_window(player, opp, msg, msg2)
         sleep(3)
         quit()
     else:
-        draw_window(player, opp, msg)
+        draw_window(player, opp, msg, msg2)
 
 
 def draw_text(string, x, y):
@@ -310,6 +319,7 @@ def draw_text(string, x, y):
 def main():
     run = True
     msg = 'Let\'s play Battleship!'
+    msg2 = ''
     pl_ships = SHIPS
     pygame.display.set_caption('Battleship')
     pl_battlefield = Battlefield(10, 10, PLAYER_TEXT.get_height() + 2 * EDGE)
@@ -318,16 +328,17 @@ def main():
 
     opp_battlefield.generate()
 
-    draw_window(pl_battlefield, opp_battlefield, msg)
+    draw_window(pl_battlefield, opp_battlefield, msg, msg2)
     sleep(2)
 
     while run:
         if pl_ships:
             msg = f'Place the ship of size {pl_ships[0]}'
         else:
-            if not msg == 'Great. It\'s a hit! Pick another place to shoot at':
-                msg = 'Your turn. Choose the place to shoot at'
-        draw_window(pl_battlefield, opp_battlefield, msg)
+            if not msg == 'Great. It\'s a hit!':
+                msg = 'Your turn.'
+                msg2 = 'Choose the place to shoot at'
+        draw_window(pl_battlefield, opp_battlefield, msg, msg2)
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -371,17 +382,24 @@ def main():
                         opp_battlefield.move_arrows('right')
                     if event.key == pygame.K_RETURN:
                         player_missed = opp_battlefield.shoot()
-                        check_endgame(pl_battlefield, opp_battlefield, msg)
+                        check_endgame(pl_battlefield, opp_battlefield,
+                                      msg, msg2)
                         if player_missed:
-                            msg = 'You missed. Opponent\'s turn'
-                            draw_window(pl_battlefield, opp_battlefield, msg)
+                            msg = 'You missed.'
+                            msg2 = 'Opponent\'s turn'
+                            draw_window(pl_battlefield, opp_battlefield,
+                                        msg, msg2)
                             sleep(1)
                             pl_battlefield.opps_turn()
-                            check_endgame(pl_battlefield, opp_battlefield, msg)
+                            check_endgame(pl_battlefield, opp_battlefield,
+                                          msg, msg2)
+                        elif opp_battlefield.repeat():
+                            pass
                         else:
-                            msg = 'Great. It\'s a hit! Pick another place to ' \
-                                  'shoot at'
-                            draw_window(pl_battlefield, opp_battlefield, msg)
+                            msg = 'Great. It\'s a hit!'
+                            msg2 = 'Pick another place to shoot at'
+                            draw_window(pl_battlefield, opp_battlefield,
+                                        msg, msg2)
 
 
 if __name__ == '__main__':
