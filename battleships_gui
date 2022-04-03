@@ -27,6 +27,7 @@ TARGET_REVEALED = 'O'
 EMPTY_CELL = ''
 
 SHIPS = [6, 4, 4, 3, 3, 2, 2]
+HITS = sum(SHIPS)
 
 
 class Battlefield:
@@ -44,6 +45,7 @@ class Battlefield:
         self.selected = None
         self.locked = []
         self.moves = []
+        self.adjacent = []
         self.hits_left = sum(SHIPS)
 
     def draw(self):
@@ -88,18 +90,32 @@ class Battlefield:
     def opps_turn(self):
         miss = False
         while not miss:
-            x, y = [random.randint(0, 9) for _ in range(2)]
+            if self.adjacent:
+                x, y = self.adjacent.pop(random.randint(0,
+                                                        len(self.adjacent)-1))
+            else:
+                x, y = [random.randint(0, 9) for _ in range(2)]
             if (x, y) in self.moves:
                 continue
             self.moves.append((x, y))
+
             if self.cells[x][y].value:
                 self.cells[x][y].value = TARGET_HIT
                 self.hits_left -= 1
+
+                if x > 0:
+                    self.adjacent.append((x - 1, y))
+                if x < 9:
+                    self.adjacent.append((x + 1, y))
+                if y > 0:
+                    self.adjacent.append((x, y - 1))
+                if y < 9:
+                    self.adjacent.append((x, y + 1))
+
                 continue
             else:
                 self.cells[x][y].value = TARGET_MISSED
                 miss = True
-            print(f'Player\'s ships left: {self.hits_left}')
 
     def evaluate_selected(self, ship_list):
         ship = ship_list[0]
@@ -218,7 +234,6 @@ class Opponent(Battlefield):
                 else:
                     self.cells[x][y].value = TARGET_MISSED
                     return True
-        print(f'Opponent\'s ships left: {self.hits_left}')
 
 
 class Cell:
@@ -254,7 +269,7 @@ class Cell:
                              (x, y + self.h_offset, gap, gap), 3)
 
 
-def draw_window(player, opp):
+def draw_window(player, opp, msg):
     pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 
     WIN.fill(BG_COLOR)
@@ -262,33 +277,39 @@ def draw_window(player, opp):
     player.draw()
     opp.draw()
 
-    text('Player\'s board:', EDGE, EDGE)
-    text('Opponent\'s board:', EDGE,
-         3 * EDGE + BF_HEIGHT + PLAYER_TEXT.get_height())
+    draw_text(f'Player\'s board: ({HITS-player.hits_left}/'
+              f'{HITS} hits)', EDGE, EDGE)
+    draw_text(f'Opponent\'s board: ({HITS-opp.hits_left}/{HITS} '
+              f'hits)', EDGE,
+              3 * EDGE + BF_HEIGHT + PLAYER_TEXT.get_height())
+    draw_text(msg, BF_WIDTH + 6 * EDGE, EDGE)
 
     pygame.display.flip()
 
 
-def check_endgame(player, opp):
-    if player.hits_left == 0:
-        print('Opponent wins!')
-        draw_window(player, opp)
+def check_endgame(player, opp, msg):
+    if not player.hits_left:
+        msg = 'Opponent wins!'
+        draw_window(player, opp, msg)
         sleep(3)
         quit()
-    elif opp.hits_left == 0:
-        print('Player wins!')
-        draw_window(player, opp)
+    elif not opp.hits_left:
+        msg = 'Player wins!'
+        draw_window(player, opp, msg)
         sleep(3)
         quit()
+    else:
+        draw_window(player, opp, msg)
 
 
-def text(string, x, y):
+def draw_text(string, x, y):
     msg = FONT.render(string, True, (0, 0, 0))
     WIN.blit(msg, (x, y))
 
 
 def main():
     run = True
+    msg = 'Let\'s play Battleship!'
     pl_ships = SHIPS
     pygame.display.set_caption('Battleship')
     pl_battlefield = Battlefield(10, 10, PLAYER_TEXT.get_height() + 2 * EDGE)
@@ -297,9 +318,16 @@ def main():
 
     opp_battlefield.generate()
 
-    while run:
-        draw_window(pl_battlefield, opp_battlefield)
+    draw_window(pl_battlefield, opp_battlefield, msg)
+    sleep(2)
 
+    while run:
+        if pl_ships:
+            msg = f'Place the ship of size {pl_ships[0]}'
+        else:
+            if not msg == 'Great. It\'s a hit! Pick another place to shoot at':
+                msg = 'Your turn. Choose the place to shoot at'
+        draw_window(pl_battlefield, opp_battlefield, msg)
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -314,7 +342,7 @@ def main():
                 opp_battlefield.deselect_cells()
                 if clicked_pl and pl_ships:
                     pl_battlefield.select_cell(clicked_pl[0], clicked_pl[1])
-                elif clicked_opp:
+                elif clicked_opp and not pl_ships:
                     opp_battlefield.select_cell(clicked_opp[0], clicked_opp[1])
             if event.type == pygame.KEYDOWN:
                 if pl_battlefield.selected and pl_ships:
@@ -343,15 +371,18 @@ def main():
                         opp_battlefield.move_arrows('right')
                     if event.key == pygame.K_RETURN:
                         player_missed = opp_battlefield.shoot()
-                        check_endgame(pl_battlefield, opp_battlefield)
+                        check_endgame(pl_battlefield, opp_battlefield, msg)
                         if player_missed:
+                            msg = 'You missed. Opponent\'s turn'
+                            draw_window(pl_battlefield, opp_battlefield, msg)
+                            sleep(1)
                             pl_battlefield.opps_turn()
-                            check_endgame(pl_battlefield, opp_battlefield)
+                            check_endgame(pl_battlefield, opp_battlefield, msg)
+                        else:
+                            msg = 'Great. It\'s a hit! Pick another place to ' \
+                                  'shoot at'
+                            draw_window(pl_battlefield, opp_battlefield, msg)
 
 
 if __name__ == '__main__':
     main()
-
-# dodać info - ile statków, missed/hit, kto wygrywa, czyja tura
-# logika opponenta
-# wyłączyć select dla opp na początku gry
