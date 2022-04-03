@@ -282,8 +282,8 @@ def check_endgame(player, opp):
         quit()
 
 
-def text(text, x, y):
-    msg = FONT.render(text, True, (0, 0, 0))
+def text(string, x, y):
+    msg = FONT.render(string, True, (0, 0, 0))
     WIN.blit(msg, (x, y))
 
 
