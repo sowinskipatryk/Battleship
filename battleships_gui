@@ -1,10 +1,9 @@
 import pygame
 import random
-import string
 from time import sleep
 pygame.init()
 
-SCREEN_WIDTH, SCREEN_HEIGHT = 600, 600
+WIN_WIDTH, WIN_HEIGHT = 600, 600
 BF_WIDTH, BF_HEIGHT = 240, 240
 
 CELL_COLOR = (200, 200, 200)
@@ -13,14 +12,14 @@ LOCKED_COLOR = (83, 255, 73)
 LINE_COLOR = (0, 0, 0)
 BG_COLOR = (80, 80, 80)
 
-SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 FONT = pygame.font.SysFont('Comic Sans', 20)
 
 FPS = 60
 EDGE = 10
 
-TEXT_PL = FONT.render('Player\'s board:', True, (0, 0, 0))
-TEXT_OPP = FONT.render('Opponent\'s board:', True, (0, 0, 0))
+PLAYER_TEXT = FONT.render('Player\'s board:', True, (0, 0, 0))
+OPP_TEXT = FONT.render('Opponent\'s board:', True, (0, 0, 0))
 
 TARGET_HIT = 'X'
 TARGET_MISSED = '-'
@@ -33,7 +32,7 @@ SHIPS = [6, 4, 4, 3, 3, 2, 2]
 class Battlefield:
     width = BF_WIDTH
     height = BF_HEIGHT
-    screen = SCREEN
+    window = WIN
 
     def __init__(self, rows, cols, h_offset):
         self.rows = rows
@@ -54,24 +53,24 @@ class Battlefield:
 
         gap = self.width / 10
         for x in range(self.rows + 1):
-            pygame.draw.line(self.screen, LINE_COLOR,
+            pygame.draw.line(self.window, LINE_COLOR,
                              (0, self.h_offset + x * gap),
                              (self.width, self.h_offset + x * gap), 2)
         for x in range(self.cols+1):
-            pygame.draw.line(self.screen, LINE_COLOR, (x * gap, self.h_offset),
+            pygame.draw.line(self.window, LINE_COLOR, (x * gap, self.h_offset),
                              (x * gap, self.height + self.h_offset), 2)
 
-    def select(self, row, col):
+    def select_cell(self, row, col):
         self.cells[row][col].selected = True
         self.selected = (row, col)
 
-    def deselect_all(self):
+    def deselect_cells(self):
         for x in range(self.rows):
             for y in range(self.cols):
                 self.cells[x][y].selected = False
         self.selected = None
 
-    def lock(self):
+    def lock_cell(self):
         row, col = self.selected
         if self.cells[row][col].locked:
             self.cells[row][col].locked = False
@@ -80,7 +79,7 @@ class Battlefield:
             self.cells[row][col].locked = True
             self.locked.append((row, col))
 
-    def unlock_all(self):
+    def unlock_cells(self):
         for x in range(self.rows):
             for y in range(self.cols):
                 self.cells[x][y].locked = False
@@ -102,7 +101,7 @@ class Battlefield:
                 miss = True
             print(f'Player\'s ships left: {self.hits_left}')
 
-    def evaluate(self, ship_list):
+    def evaluate_selected(self, ship_list):
         ship = ship_list[0]
         if len(self.locked) == ship:
 
@@ -132,9 +131,9 @@ class Battlefield:
                     for x, y in self.locked:
                         self.cells[x][y].value = TARGET_REVEALED
                 ship_list.pop(0)
-        self.unlock_all()
+        self.unlock_cells()
         if not ship_list:
-            self.deselect_all()
+            self.deselect_cells()
 
     def get_cell(self, pos):
 
@@ -179,7 +178,7 @@ class Opponent(Battlefield):
             for y in range(self.cols):
                 self.cells[x][y].visible = False
 
-    def generate_opps_bf(self):
+    def generate(self):
         opp_ships = SHIPS[:]
         while opp_ships:
             ship_len = opp_ships[0]
@@ -240,81 +239,66 @@ class Cell:
         gap = self.bf_width / 10
         x = self.row * gap
         y = self.col * gap
-        pygame.draw.rect(SCREEN, self.color, (x, y + self.h_offset, gap, gap))
+        pygame.draw.rect(WIN, self.color, (x, y + self.h_offset, gap, gap))
 
         if self.value and self.visible:
             text = FONT.render(self.value, True, (0, 0, 0))
-            SCREEN.blit(text, (x + 5, y + self.h_offset - 2))
+            WIN.blit(text, (x + 5, y + self.h_offset - 2))
 
         if self.selected:
-            pygame.draw.rect(SCREEN, SELECTED_COLOR,
+            pygame.draw.rect(WIN, SELECTED_COLOR,
                              (x, y + self.h_offset, gap, gap), 3)
 
         if self.locked:
-            pygame.draw.rect(SCREEN, LOCKED_COLOR,
+            pygame.draw.rect(WIN, LOCKED_COLOR,
                              (x, y + self.h_offset, gap, gap), 3)
+
+
+def draw_window(player, opp):
+    pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+
+    WIN.fill(BG_COLOR)
+
+    player.draw()
+    opp.draw()
+
+    text('Player\'s board:', EDGE, EDGE)
+    text('Opponent\'s board:', EDGE,
+         3 * EDGE + BF_HEIGHT + PLAYER_TEXT.get_height())
+
+    pygame.display.flip()
 
 
 def check_endgame(player, opp):
     if player.hits_left == 0:
         print('Opponent wins!')
-        pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-
-        SCREEN.fill(BG_COLOR)
-
-        player.draw()
-        opp.draw()
-
-        message('Player\'s board:', EDGE, EDGE)
-        message('Opponent\'s board:', EDGE,
-                3 * EDGE + BF_HEIGHT + TEXT_PL.get_height())
-        pygame.display.flip()
+        draw_window(player, opp)
         sleep(3)
         quit()
     elif opp.hits_left == 0:
         print('Player wins!')
-        pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-
-        SCREEN.fill(BG_COLOR)
-
-        player.draw()
-        opp.draw()
-
-        message('Player\'s board:', EDGE, EDGE)
-        message('Opponent\'s board:', EDGE,
-                3 * EDGE + BF_HEIGHT + TEXT_PL.get_height())
-        pygame.display.flip()
+        draw_window(player, opp)
         sleep(3)
         quit()
 
 
-def message(text, x, y):
+def text(text, x, y):
     msg = FONT.render(text, True, (0, 0, 0))
-    SCREEN.blit(msg, (x, y))
+    WIN.blit(msg, (x, y))
 
 
 def main():
     run = True
     pl_ships = SHIPS
     pygame.display.set_caption('Battleship')
-    pl_battlefield = Battlefield(10, 10, TEXT_PL.get_height() + 2 * EDGE)
-    opp_battlefield = Opponent(10, 10, TEXT_PL.get_height() +
-                               4 * EDGE + BF_HEIGHT + TEXT_OPP.get_height())
+    pl_battlefield = Battlefield(10, 10, PLAYER_TEXT.get_height() + 2 * EDGE)
+    opp_battlefield = Opponent(10, 10, PLAYER_TEXT.get_height() +
+                               4 * EDGE + BF_HEIGHT + OPP_TEXT.get_height())
 
-    opp_battlefield.generate_opps_bf()
+    opp_battlefield.generate()
 
     while run:
-        pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-
-        SCREEN.fill(BG_COLOR)
-
-        pl_battlefield.draw()
-        opp_battlefield.draw()
-
-        message('Player\'s board:', EDGE, EDGE)
-        message('Opponent\'s board:', EDGE,
-                3 * EDGE + BF_HEIGHT + TEXT_PL.get_height())
-        pygame.display.flip()
+        draw_window(pl_battlefield, opp_battlefield)
 
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
@@ -326,12 +310,12 @@ def main():
                 pos = pygame.mouse.get_pos()
                 clicked_pl = pl_battlefield.get_cell(pos)
                 clicked_opp = opp_battlefield.get_cell(pos)
-                pl_battlefield.deselect_all()
-                opp_battlefield.deselect_all()
+                pl_battlefield.deselect_cells()
+                opp_battlefield.deselect_cells()
                 if clicked_pl and pl_ships:
-                    pl_battlefield.select(clicked_pl[0], clicked_pl[1])
+                    pl_battlefield.select_cell(clicked_pl[0], clicked_pl[1])
                 elif clicked_opp:
-                    opp_battlefield.select(clicked_opp[0], clicked_opp[1])
+                    opp_battlefield.select_cell(clicked_opp[0], clicked_opp[1])
             if event.type == pygame.KEYDOWN:
                 if pl_battlefield.selected and pl_ships:
                     if event.key == pygame.K_UP:
@@ -343,11 +327,11 @@ def main():
                     if event.key == pygame.K_RIGHT:
                         pl_battlefield.move_arrows('right')
                     if event.key == pygame.K_SPACE:
-                        pl_battlefield.lock()
+                        pl_battlefield.lock_cell()
                     if event.key == pygame.K_DELETE:
                         pl_battlefield.locked = []
                     if event.key == pygame.K_RETURN:
-                        pl_battlefield.evaluate(pl_ships)
+                        pl_battlefield.evaluate_selected(pl_ships)
                 if opp_battlefield.selected and not pl_ships:
                     if event.key == pygame.K_UP:
                         opp_battlefield.move_arrows('up')
