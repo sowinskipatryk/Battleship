@@ -21,6 +21,20 @@ EDGE = 10
 PLAYER_TEXT = FONT.render('Player\'s board:', True, (0, 0, 0))
 OPP_TEXT = FONT.render('Opponent\'s board:', True, (0, 0, 0))
 
+MSG_PLAYER_MISS = 'You missed.'
+MSG_PLAYER_TURN = 'Your turn.'
+MSG_OPP_TURN = 'Opponent\'s turn.'
+MSG_PICK_CELL = 'Pick a cell to shoot at.'
+MSG_PICK_ANOTHER = 'Pick another cell.'
+MSG_HIT = 'Great, It\'s a hit!'
+MSG_MOVE_REPEAT = 'You already shot this cell.'
+MSG_LETS_PLAY = 'Let\'s play Battleship!'
+MSG_EMPTY = ''
+MSG_PLAYER_NO_SHIPS = 'All player\'s ships destroyed!'
+MSG_OPP_WINS = 'Opponent wins!'
+MSG_OPP_NO_SHIPS = 'All opponent\'s ships destroyed!'
+MSG_PLAYER_WINS = 'You win!'
+
 TARGET_HIT = 'X'
 TARGET_MISSED = '-'
 TARGET_REVEALED = 'O'
@@ -46,7 +60,7 @@ class Battlefield:
         self.locked = []
         self.moves = []
         self.adjacent = []
-        self.hits_left = sum(SHIPS)
+        self.hits_left = HITS
 
     def draw(self):
         for x in range(self.rows):
@@ -95,6 +109,7 @@ class Battlefield:
                                                         len(self.adjacent)-1))
             else:
                 x, y = [random.randint(0, 9) for _ in range(2)]
+
             if (x, y) in self.moves:
                 continue
             self.moves.append((x, y))
@@ -111,7 +126,6 @@ class Battlefield:
                     self.adjacent.append((x, y - 1))
                 if y < 9:
                     self.adjacent.append((x, y + 1))
-
                 continue
             else:
                 self.cells[x][y].value = TARGET_MISSED
@@ -152,9 +166,7 @@ class Battlefield:
             self.deselect_cells()
 
     def get_cell(self, pos):
-
-        if pos[0] < self.width and pos[1] < self.height + self.h_offset \
-                and pos[1] > self.h_offset:
+        if pos[0] < self.width and 0 < pos[1] - self.h_offset < self.height:
             gap = self.width // 10
             x = pos[0] // gap
             y = (pos[1] - self.h_offset) // gap
@@ -200,6 +212,7 @@ class Opponent(Battlefield):
             ship_len = opp_ships[0]
             direction = random.choice(['horizontal', 'vertical'])
             x, y = [random.randint(0, 9) for _ in range(2)]
+
             if direction == 'horizontal':
                 range_x = range(max(0, x - 1), min(x + ship_len + 1, 10))
                 range_y = range(max(0, y - 1), min(y + 2, 10))
@@ -210,7 +223,7 @@ class Opponent(Battlefield):
                     continue
                 for num in range(x, x + ship_len):
                     self.cells[y][num].value = TARGET_REVEALED
-            if direction == 'vertical':
+            elif direction == 'vertical':
                 range_x = range(max(0, x - 1), min(x + 2, 10))
                 range_y = range(max(0, y - 1), min(y + ship_len + 1, 10))
                 if len(range_x) < 2 or len(range_y) < ship_len + 1:
@@ -294,21 +307,15 @@ def draw_window(player, opp, msg, msg2):
     pygame.display.flip()
 
 
-def check_endgame(player, opp, msg, msg2):
+def check_endgame(player, opp):
     if not player.hits_left:
-        msg = 'All player\'s ships destroyed!'
-        msg2 = 'Opponent wins!'
-        draw_window(player, opp, msg, msg2)
+        draw_window(player, opp, MSG_PLAYER_NO_SHIPS, MSG_OPP_WINS)
         sleep(3)
         quit()
     elif not opp.hits_left:
-        msg = 'All enemy ships destroyed!'
-        msg2 = 'Player wins!'
-        draw_window(player, opp, msg, msg2)
+        draw_window(player, opp, MSG_OPP_NO_SHIPS, MSG_PLAYER_WINS)
         sleep(3)
         quit()
-    else:
-        draw_window(player, opp, msg, msg2)
 
 
 def draw_text(string, x, y):
@@ -318,9 +325,9 @@ def draw_text(string, x, y):
 
 def main():
     run = True
-    msg = 'Let\'s play Battleship!'
-    msg2 = ''
-    pl_ships = SHIPS
+    repeat = False
+    hit = False
+    pl_ships = SHIPS[:]
     pygame.display.set_caption('Battleship')
     pl_battlefield = Battlefield(10, 10, PLAYER_TEXT.get_height() + 2 * EDGE)
     opp_battlefield = Opponent(10, 10, PLAYER_TEXT.get_height() +
@@ -328,17 +335,24 @@ def main():
 
     opp_battlefield.generate()
 
-    draw_window(pl_battlefield, opp_battlefield, msg, msg2)
+    draw_window(pl_battlefield, opp_battlefield, MSG_LETS_PLAY, MSG_EMPTY)
     sleep(2)
 
     while run:
         if pl_ships:
-            msg = f'Place the ship of size {pl_ships[0]}'
+            draw_window(pl_battlefield, opp_battlefield,
+                        f'Place the ship of size {pl_ships[0]}', EMPTY_CELL)
         else:
-            if not msg == 'Great. It\'s a hit!':
-                msg = 'Your turn.'
-                msg2 = 'Choose the place to shoot at'
-        draw_window(pl_battlefield, opp_battlefield, msg, msg2)
+            if repeat:
+                draw_window(pl_battlefield, opp_battlefield,
+                            MSG_MOVE_REPEAT, MSG_PICK_ANOTHER)
+            elif hit:
+                draw_window(pl_battlefield, opp_battlefield,
+                            MSG_HIT, MSG_PICK_ANOTHER)
+            else:
+                draw_window(pl_battlefield, opp_battlefield,
+                            MSG_PLAYER_TURN, MSG_PICK_CELL)
+
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -381,25 +395,21 @@ def main():
                     if event.key == pygame.K_RIGHT:
                         opp_battlefield.move_arrows('right')
                     if event.key == pygame.K_RETURN:
-                        player_missed = opp_battlefield.shoot()
-                        check_endgame(pl_battlefield, opp_battlefield,
-                                      msg, msg2)
-                        if player_missed:
-                            msg = 'You missed.'
-                            msg2 = 'Opponent\'s turn'
-                            draw_window(pl_battlefield, opp_battlefield,
-                                        msg, msg2)
-                            sleep(1)
-                            pl_battlefield.opps_turn()
-                            check_endgame(pl_battlefield, opp_battlefield,
-                                          msg, msg2)
-                        elif opp_battlefield.repeat():
-                            pass
+                        if opp_battlefield.repeat():
+                            repeat = True
                         else:
-                            msg = 'Great. It\'s a hit!'
-                            msg2 = 'Pick another place to shoot at'
-                            draw_window(pl_battlefield, opp_battlefield,
-                                        msg, msg2)
+                            repeat = False
+                            player_missed = opp_battlefield.shoot()
+                            check_endgame(pl_battlefield, opp_battlefield)
+                            if player_missed:
+                                hit = False
+                                draw_window(pl_battlefield, opp_battlefield,
+                                            MSG_PLAYER_MISS, MSG_OPP_TURN)
+                                sleep(1)
+                                pl_battlefield.opps_turn()
+                                check_endgame(pl_battlefield, opp_battlefield)
+                            else:
+                                hit = True
 
 
 if __name__ == '__main__':
