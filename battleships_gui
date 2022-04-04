@@ -3,7 +3,7 @@ import random
 from time import sleep
 pygame.init()
 
-WIN_WIDTH, WIN_HEIGHT = 600, 600
+WIN_WIDTH, WIN_HEIGHT = 700, 580
 BF_WIDTH, BF_HEIGHT = 240, 240
 
 CELL_COLOR = (200, 200, 200)
@@ -12,11 +12,11 @@ LOCKED_COLOR = (83, 255, 73)
 LINE_COLOR = (0, 0, 0)
 BG_COLOR = (80, 80, 80)
 
-WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
-FONT = pygame.font.SysFont('Comic Sans', 20)
-
 FPS = 60
-EDGE = 10
+EDGE = 5
+
+WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+FONT = pygame.font.SysFont('Comic Sans', 4 * EDGE)
 
 PLAYER_TEXT = FONT.render('Player\'s board:', True, (0, 0, 0))
 OPP_TEXT = FONT.render('Opponent\'s board:', True, (0, 0, 0))
@@ -34,6 +34,14 @@ MSG_PLAYER_NO_SHIPS = 'All player\'s ships destroyed!'
 MSG_OPP_WINS = 'Opponent wins!'
 MSG_OPP_NO_SHIPS = 'All opponent\'s ships destroyed!'
 MSG_PLAYER_WINS = 'You win!'
+MSG_LEGEND = 'Legend:'
+MSG_SELECT = 'Use ARROWS or CLICK to select cells'
+MSG_LOCK = 'Press SPACE BAR to lock the cell'
+MSG_PLACE_SHIP = 'Press ENTER to place the ship'
+MSG_ATTACK = 'Press ENTER to attack selected cell'
+
+LEGEND_PLACEMENT = [MSG_LEGEND, MSG_SELECT, MSG_LOCK, MSG_PLACE_SHIP]
+LEGEND_SHOOTING = [MSG_LEGEND, MSG_SELECT, MSG_ATTACK]
 
 TARGET_HIT = 'X'
 TARGET_MISSED = '-'
@@ -288,7 +296,7 @@ class Cell:
                              (x, y + self.h_offset, gap, gap), 3)
 
 
-def draw_window(player, opp, msg, msg2):
+def draw_window(player, opp, msg, msg2, show_legend=False, ships_placed=False):
     pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 
     WIN.fill(BG_COLOR)
@@ -301,8 +309,23 @@ def draw_window(player, opp, msg, msg2):
     draw_text(f'Opponent\'s board: ({HITS-opp.hits_left}/{HITS} '
               f'hits)', EDGE,
               3 * EDGE + BF_HEIGHT + PLAYER_TEXT.get_height())
-    draw_text(msg, BF_WIDTH + 6 * EDGE, EDGE)
-    draw_text(msg2, BF_WIDTH + 6 * EDGE, 3*EDGE)
+    if ships_placed:
+        draw_text(msg, BF_WIDTH + 16 * EDGE, 3 * EDGE + BF_HEIGHT +
+                  PLAYER_TEXT.get_height())
+        draw_text(msg2, BF_WIDTH + 16 * EDGE, 9 * EDGE + BF_HEIGHT +
+                  PLAYER_TEXT.get_height())
+    else:
+        draw_text(msg, BF_WIDTH + 16 * EDGE, EDGE)
+        draw_text(msg2, BF_WIDTH + 16 * EDGE, 7 * EDGE)
+
+    if show_legend:
+        if ships_placed:
+            for i, text in enumerate(LEGEND_SHOOTING):
+                draw_text(text, BF_WIDTH + 16 * EDGE, 28 * EDGE + BF_HEIGHT +
+                          PLAYER_TEXT.get_height() + 6 * i * EDGE)
+        else:
+            for i, text in enumerate(LEGEND_PLACEMENT):
+                draw_text(text, BF_WIDTH + 16 * EDGE, 18 * EDGE + 6 * i * EDGE)
 
     pygame.display.flip()
 
@@ -335,23 +358,25 @@ def main():
 
     opp_battlefield.generate()
 
-    draw_window(pl_battlefield, opp_battlefield, MSG_LETS_PLAY, MSG_EMPTY)
+    draw_window(pl_battlefield, opp_battlefield, MSG_LETS_PLAY, MSG_EMPTY,
+                False, False)
     sleep(2)
 
     while run:
         if pl_ships:
             draw_window(pl_battlefield, opp_battlefield,
-                        f'Place the ship of size {pl_ships[0]}', EMPTY_CELL)
+                        f'Place the ship of size {pl_ships[0]}', EMPTY_CELL,
+                        True, False)
         else:
             if repeat:
                 draw_window(pl_battlefield, opp_battlefield,
-                            MSG_MOVE_REPEAT, MSG_PICK_ANOTHER)
+                            MSG_MOVE_REPEAT, MSG_PICK_ANOTHER, True, True)
             elif hit:
                 draw_window(pl_battlefield, opp_battlefield,
-                            MSG_HIT, MSG_PICK_ANOTHER)
+                            MSG_HIT, MSG_PICK_ANOTHER, True, True)
             else:
                 draw_window(pl_battlefield, opp_battlefield,
-                            MSG_PLAYER_TURN, MSG_PICK_CELL)
+                            MSG_PLAYER_TURN, MSG_PICK_CELL, True, True)
 
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
@@ -404,8 +429,9 @@ def main():
                             if player_missed:
                                 hit = False
                                 draw_window(pl_battlefield, opp_battlefield,
-                                            MSG_PLAYER_MISS, MSG_OPP_TURN)
-                                sleep(1)
+                                            MSG_PLAYER_MISS, MSG_OPP_TURN,
+                                            True, True)
+                                sleep(1.5)
                                 pl_battlefield.opps_turn()
                                 check_endgame(pl_battlefield, opp_battlefield)
                             else:
