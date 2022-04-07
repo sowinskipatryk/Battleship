@@ -20,9 +20,6 @@ EDGE = 5
 WIN = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 FONT = pygame.font.SysFont('Comic Sans', 4 * EDGE)
 
-TEXT_PLAYER = FONT.render('Player\'s board:', True, (0, 0, 0))
-TEXT_OPP = FONT.render('Opponent\'s board:', True, (0, 0, 0))
-
 MSG_PLAYER_MISS = 'You missed.'
 MSG_PLAYER_TURN = 'Your turn.'
 MSG_OPP_TURN = 'Opponent\'s turn.'
@@ -58,6 +55,9 @@ pl_ship_list = [
     ['Patrol Boat', 1, 2],
 ]
 
+text_player = FONT.render('Player\'s board:', True, (0, 0, 0))
+text_opp = FONT.render('Opponent\'s board:', True, (0, 0, 0))
+
 opp_ship_list = copy.deepcopy(pl_ship_list)
 
 ship_lengths = [[i for _ in range(j)] for _, i, j in pl_ship_list]
@@ -74,7 +74,7 @@ class Battlefield:
         self.rows = rows
         self.cols = cols
         self.h_offset = h_offset
-        self.cells = [[Cell(i, j, self.width, self.height, self.h_offset)
+        self.cells = [[Cell(i, j, self.width, self.height, self.h_offset) 
                        for i in range(self.rows)]
                       for j in range(self.cols)]
         self.selected = None
@@ -91,9 +91,9 @@ class Battlefield:
                 self.cells[x][y].draw()
 
         gap = self.width / 10
+        
         for x in range(self.rows + 1):
-            pygame.draw.line(self.window, COLOR_LINE,
-                             (0, self.h_offset + x * gap),
+            pygame.draw.line(self.window, COLOR_LINE, (0, self.h_offset + x * gap), 
                              (self.width, self.h_offset + x * gap), 2)
         for x in range(self.cols+1):
             pygame.draw.line(self.window, COLOR_LINE, (x * gap, self.h_offset),
@@ -143,16 +143,12 @@ class Battlefield:
                 self.selected = (self.selected[0], self.selected[1] + 1)
                 self.cells[row][col + 1].selected = True
                 self.cells[row][col].selected = False
-
-    def is_ship_hit(self, pos):
-        for ship in self.ships:
-            if pos in ship.cells:
-                return ship
-
+                
 
 class PlayerField(Battlefield):
     def lock_cell(self):
         row, col = self.selected
+        
         if self.cells[row][col].locked:
             self.cells[row][col].locked = False
             self.locked.remove((row, col))
@@ -170,8 +166,7 @@ class PlayerField(Battlefield):
         hit = True
         while hit:
             if self.adjacent:
-                x, y = self.adjacent.pop(random.randint(0,
-                                                        len(self.adjacent)-1))
+                x, y = self.adjacent.pop(random.randint(0, len(self.adjacent)-1))
             else:
                 x, y = [random.randint(0, 9) for _ in range(2)]
 
@@ -203,20 +198,17 @@ class PlayerField(Battlefield):
                 if not hit:
                     self.cells[x][y].value = TARGET_MISSED
 
-    def is_placement_correct(self):
+    def evaluate_placement(self):
         pl_ship_name, pl_ship_len, ship_num = pl_ship_list[0]
         if len(self.locked) == pl_ship_len:
 
             x_values = [self.locked[x][0] for x in range(len(self.locked))]
             y_values = [self.locked[x][1] for x in range(len(self.locked))]
 
-            x_range = range(max(0, min(x_values) - 1),
-                            min(max(x_values) + 2, 10))
-            y_range = range(max(0, min(y_values) - 1),
-                            min(max(y_values) + 2, 10))
+            x_range = range(max(0, min(x_values) - 1), min(max(x_values) + 2, 10))
+            y_range = range(max(0, min(y_values) - 1), min(max(y_values) + 2, 10))
 
-            if not any(self.cells[x][y].value
-                       for x in x_range for y in y_range):
+            if not any(self.cells[x][y].value for x in x_range for y in y_range):
                 rows = []
                 cols = []
                 for x, y in self.locked:
@@ -224,22 +216,21 @@ class PlayerField(Battlefield):
                     cols.append(y)
                     self.cells[x][y].locked = False
 
-                if len(set(rows)) == 1 and sum(set(cols)) == \
-                        sum([min(cols) + i for i in range(pl_ship_len)]):
+                if len(set(rows)) == 1 and sum(set(cols)) == sum([min(cols) + i for i in range(pl_ship_len)]):
                     for x, y in self.locked:
                         self.cells[x][y].value = TARGET_REVEALED
-                    self.ships.append(Ship(pl_ship_name, self.locked,
-                                           'horizontal'))
-                elif len(set(cols)) == 1 and sum(set(rows)) == \
-                        sum([min(rows) + i for i in range(pl_ship_len)]):
+                    self.ships.append(Ship(pl_ship_name, self.locked, 'horizontal'))
+        
+                elif len(set(cols)) == 1 and sum(set(rows)) == sum([min(rows) + i for i in range(pl_ship_len)]):
                     for x, y in self.locked:
                         self.cells[x][y].value = TARGET_REVEALED
-                    self.ships.append(Ship(pl_ship_name, self.locked,
-                                           'vertical'))
+                    self.ships.append(Ship(pl_ship_name, self.locked, 'vertical'))
+                    
                 if ship_num == 1:
                     pl_ship_list.pop(0)
                 else:
                     pl_ship_list[0][2] -= 1
+                    
         self.unlock_cells()
         if not pl_ship_list:
             self.deselect_cells()
@@ -264,27 +255,24 @@ class OpponentField(Battlefield):
                 range_y = range(max(0, y - 1), min(y + 2, 10))
                 if len(range_x) < opp_ship_len + 1 or len(range_y) < 2:
                     continue
-                if any(self.cells[row][col].value for row in range_y
-                       for col in range_x):
+                if any(self.cells[row][col].value for row in range_y for col in range_x):
                     continue
                 for num in range(x, x + opp_ship_len):
                     self.cells[y][num].value = TARGET_REVEALED
                 opp_ship_cells = [(x, y) for x in range(x, x+opp_ship_len)]
-                self.ships.append(Ship(opp_ship_name, opp_ship_cells,
-                                       direction))
+                self.ships.append(Ship(opp_ship_name, opp_ship_cells, direction))
             elif direction == 'vertical':
                 range_x = range(max(0, x - 1), min(x + 2, 10))
                 range_y = range(max(0, y - 1), min(y + opp_ship_len + 1, 10))
                 if len(range_x) < 2 or len(range_y) < opp_ship_len + 1:
                     continue
-                if any(self.cells[row][col].value for row in range_y
-                       for col in range_x):
+                if any(self.cells[row][col].value for row in range_y for col in range_x):
                     continue
                 for num in range(y, y + opp_ship_len):
                     self.cells[num][x].value = TARGET_REVEALED
                 opp_ship_cells = [(x, y) for y in range(y, y+opp_ship_len)]
-                self.ships.append(Ship(opp_ship_name, opp_ship_cells,
-                                       direction))
+                self.ships.append(Ship(opp_ship_name, opp_ship_cells, direction))
+                
             if opp_ship_num == 1:
                 opp_ship_list.pop(0)
             else:
@@ -340,12 +328,10 @@ class Cell:
             WIN.blit(text, (x + 5, y + self.h_offset - 2))
 
         if self.selected:
-            pygame.draw.rect(WIN, COLOR_SELECTED,
-                             (x, y + self.h_offset, gap, gap), 3)
+            pygame.draw.rect(WIN, COLOR_SELECTED, (x, y + self.h_offset, gap, gap), 3)
 
         if self.locked:
-            pygame.draw.rect(WIN, COLOR_LOCKED,
-                             (x, y + self.h_offset, gap, gap), 3)
+            pygame.draw.rect(WIN, COLOR_LOCKED, (x, y + self.h_offset, gap, gap), 3)
 
 
 class Ship:
@@ -372,16 +358,12 @@ def draw_window(player, opp, msg, msg2, show_legend=False, ships_placed=False):
     player.draw()
     opp.draw()
 
-    draw_text(f'Player\'s board: ({hits - player.hits_left}/'
-              f'{hits} hits)', EDGE, EDGE)
-    draw_text(f'Opponent\'s board: ({hits - opp.hits_left}/{hits} '
-              f'hits)', EDGE,
-              3 * EDGE + BF_HEIGHT + TEXT_PLAYER.get_height())
+    draw_text(f'Player\'s board: ({hits - player.hits_left}/{hits} hits)', EDGE, EDGE)
+    draw_text(f'Opponent\'s board: ({hits - opp.hits_left}/{hits} hits)', EDGE,
+              3 * EDGE + BF_HEIGHT + text_player.get_height())
     if ships_placed:
-        draw_text(msg, BF_WIDTH + 16 * EDGE, 3 * EDGE + BF_HEIGHT +
-                  TEXT_PLAYER.get_height())
-        draw_text(msg2, BF_WIDTH + 16 * EDGE, 9 * EDGE + BF_HEIGHT +
-                  TEXT_PLAYER.get_height())
+        draw_text(msg, BF_WIDTH + 16 * EDGE, 3 * EDGE + BF_HEIGHT + text_player.get_height())
+        draw_text(msg2, BF_WIDTH + 16 * EDGE, 9 * EDGE + BF_HEIGHT + text_player.get_height())
     else:
         draw_text(msg, BF_WIDTH + 16 * EDGE, EDGE)
         draw_text(msg2, BF_WIDTH + 16 * EDGE, 7 * EDGE)
@@ -389,8 +371,7 @@ def draw_window(player, opp, msg, msg2, show_legend=False, ships_placed=False):
     if show_legend:
         if ships_placed:
             for i, text in enumerate(LEGEND_SHOOTING):
-                draw_text(text, BF_WIDTH + 16 * EDGE, 28 * EDGE + BF_HEIGHT +
-                          TEXT_PLAYER.get_height() + 6 * i * EDGE)
+                draw_text(text, BF_WIDTH + 16 * EDGE, 28 * EDGE + BF_HEIGHT + text_player.get_height() + 6 * i * EDGE)
         else:
             for i, text in enumerate(LEGEND_PLACEMENT):
                 draw_text(text, BF_WIDTH + 16 * EDGE, 18 * EDGE + 6 * i * EDGE)
@@ -420,39 +401,32 @@ def main():
     disabled = False
     move_repeated = False
     pygame.display.set_caption('Battleship')
-    player_field = PlayerField(10, 10, TEXT_PLAYER.get_height() + 2 * EDGE)
-    opponent_field = OpponentField(10, 10, TEXT_PLAYER.get_height() +
-                                   4 * EDGE + BF_HEIGHT + TEXT_OPP.get_height())
+    player_field = PlayerField(10, 10, text_player.get_height() + 2 * EDGE)
+    opponent_field = OpponentField(10, 10, text_player.get_height() + 4 * EDGE + BF_HEIGHT + text_opp.get_height())
 
     opponent_field.place_ships()
 
-    draw_window(player_field, opponent_field, MSG_LETS_PLAY, MSG_EMPTY,
-                False, False)
+    draw_window(player_field, opponent_field, MSG_LETS_PLAY, MSG_EMPTY, False, False)
     sleep(2)
 
     while run:
         if pl_ship_list:
-            draw_window(player_field, opponent_field,
-                        f'Place the {pl_ship_list[0][0]} of size '
-                        f'{pl_ship_list[0][1]}',
+            draw_window(player_field, opponent_field, f'Place the {pl_ship_list[0][0]} of size {pl_ship_list[0][1]}',
                         TARGET_NOT, True, False)
         elif not disabled:
             player_field.disable()
             disabled = True
         else:
             if move_repeated:
-                draw_window(player_field, opponent_field,
-                            MSG_MOVE_REPEAT, MSG_PICK_ANOTHER, True, True)
+                draw_window(player_field, opponent_field, MSG_MOVE_REPEAT, MSG_PICK_ANOTHER, True, True)
             elif hit:
                 if opponent_field.last_call:
-                    draw_window(player_field, opponent_field,
-                                f'Enemy {opponent_field.last_call} has sunk!', MSG_PICK_ANOTHER, True, True)
+                    draw_window(player_field, opponent_field, f'Enemy {opponent_field.last_call} has sunk!', 
+                                MSG_PICK_ANOTHER, True, True)
                 else:
-                    draw_window(player_field, opponent_field,
-                                MSG_HIT, MSG_PICK_ANOTHER, True, True)
+                    draw_window(player_field, opponent_field, MSG_HIT, MSG_PICK_ANOTHER, True, True)
             else:
-                draw_window(player_field, opponent_field,
-                            MSG_PLAYER_TURN, MSG_PICK_CELL, True, True)
+                draw_window(player_field, opponent_field, MSG_PLAYER_TURN, MSG_PICK_CELL, True, True)
 
         keys = pygame.key.get_pressed()
         for event in pygame.event.get():
@@ -467,11 +441,9 @@ def main():
                 player_field.deselect_cells()
                 opponent_field.deselect_cells()
                 if player_bf_clicked and pl_ship_list:
-                    player_field.select_cell(player_bf_clicked[0],
-                                             player_bf_clicked[1])
+                    player_field.select_cell(player_bf_clicked[0], player_bf_clicked[1])
                 elif opp_bf_clicked and not pl_ship_list:
-                    opponent_field.select_cell(opp_bf_clicked[0],
-                                               opp_bf_clicked[1])
+                    opponent_field.select_cell(opp_bf_clicked[0], opp_bf_clicked[1])
             if event.type == pygame.KEYDOWN:
                 if player_field.selected and pl_ship_list:
                     if event.key == pygame.K_UP:
@@ -487,7 +459,7 @@ def main():
                     if event.key == pygame.K_DELETE:
                         player_field.locked = []
                     if event.key == pygame.K_RETURN:
-                        player_field.is_placement_correct()
+                        player_field.evaluate_placement()
                 if opponent_field.selected and not pl_ship_list:
                     if event.key == pygame.K_UP:
                         opponent_field.move_arrows('up')
@@ -507,9 +479,7 @@ def main():
                             game_status(player_field, opponent_field)
                             if player_missed:
                                 hit = False
-                                draw_window(player_field, opponent_field,
-                                            MSG_PLAYER_MISS, MSG_OPP_TURN,
-                                            True, True)
+                                draw_window(player_field, opponent_field, MSG_PLAYER_MISS, MSG_OPP_TURN, True, True)
                                 sleep(1.5)
                                 player_field.opponents_turn()
                                 game_status(player_field, opponent_field)
