@@ -1,4 +1,13 @@
-This is my attempt to create a famous Battleship game. 
-The repository contains a simpler version to run from the command line and a GUI version using the PyGame library.
-Both versions work as intended. I'm looking forward to add comments on less obvious parts of the code. 
-It would also be appropriate to add a Ship class to the game to conveniently pass information if the attacked ship has been completely destroyed, which would enrich the opponent's logic and give information to the player as well.
+# Battleship
+
+This is my attempt to recreate the famous Battleship game. 
+This repository contains a CLI version of the game, as well as a GUI version using the PyGame library.
+The logic of the opponent's moves could be further improved, which would enrich the game experience.
+Currently, if the opponent hits one of the player's ships, it will try to find the next cell in its environment.
+However, once the ship is eliminated, it does not avoid the surrounding cells.
+
+
+<br />
+<p align="center">
+  <img src="./showcase.gif" alt="showcase_gif" />
+</p>
