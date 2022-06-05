@@ -9,5 +9,5 @@ However, once the ship is eliminated, it does not avoid the surrounding cells.
 
 <br />
 <p align="center">
-  <img src="./showcase.gif" alt="showcase_gif" />
+  <img src="./showcase.gif" alt="showcase_gif" width=500 height=450/>
 </p>
